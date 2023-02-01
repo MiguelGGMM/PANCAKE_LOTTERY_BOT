@@ -108,6 +108,9 @@ const onMsgBT = async (msg) => {
 }
 
 const onMsgBTStats = async (msg) => {
+
+    // TODO add more stats and history check and backtesting
+    // how much winners do we have tipically per pot? etc
     let stats = onMsgBTBase(msg);
 
     let message = 'Tickets statistics:'.break(2);
