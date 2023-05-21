@@ -14,14 +14,6 @@ class EventsService {
         this.maxBlockRange = _maxBlockRange;
     }
 
-    // FORMAT
-    // let eventsFilter = {
-    //     address: "0x...",
-    //     topics: [
-    //         ethers.utils.id('Hire(address,uint256,uint256)'),
-    //         ethers.utils.id('RehireMachines(address,uint256,uint256,uint256,uint256,uint256,uint256)')
-    //     ],
-    // }
     async getEvents(eventsFilter, startBlock, toBlock='latest'){
         let events = [];
 

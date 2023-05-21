@@ -1,4 +1,3 @@
-
 var path = require("path");
 
 // Initialize dotenv for config variables
@@ -7,6 +6,7 @@ dotenv.config({
     path: path.resolve(__dirname + '/.env')
 });
 
+// TODO
 // Initialize cronjob and database
 //const { Database } = require("./database");
 require("./pancakeLotteryBot.js");
