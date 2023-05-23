@@ -4,27 +4,26 @@
 // 4. Get ticket numbers from the transaction data
 // 5. Process al data and calculate best numbers, let user know how good are compared to a random number
 
-// TODO 
-// Store tickets in mongoDB database with block number, update using a cronjob from last block
-
-process.env.NTBA_FIX_319 = 1; 
-const chalk = require('chalk');
+const _ = require('lodash');
 const Config = require('./config');
-const tokenBot = Config.TELEGRAM_BOT_KEY;
 const { getTelegramCommands, getCommandHelpText } = require('./commands/commands.js');
 const Manager = require('./chains/Manager');
 const ContractService = require('./services/ContractService');
-const { ethers } = require('ethers');
-const _ = require('lodash');
+const CronjobService = require('./services/CronjobService');
+const MongodbService = require('./services/MongoDBService');
+
+const tokenBot = Config.TELEGRAM_BOT_KEY;
 const RPC_PROVIDER = Config.RPC_PROVIDER;
+const API_KEY = Config.API_KEY;
+const CHUNK_SIZE = Config.CHUNK_SIZE;
+const BLOCK_RANGE = Config.BLOCK_RANGE;
+
+//Each ticket has 7 positions and 10 possible numbers
 const positions = Array(7).fill().map((a, i) => (i + 1).toString());
 const numbers = Array(10).fill().map((a, i) => i.toString());
 
-//console.clear()
-
 const initialize = async () => {
-
-    log('Initializing...');	
+    'Initializing...'.log();
     if(!(await initialize_pancake_lottery_bot())){ return; }	
 }
 
@@ -38,8 +37,10 @@ initialize_pancake_lottery_bot = async() => {
         if(telegramCommand.command == '/gBTRn') telegramCommand._function = onMsgBTRn;
         if(telegramCommand.command == '/help') telegramCommand._function = onMsgHelp;
     }
+    
     Manager.initialize(tokenBot, telegramCommands, RPC_PROVIDER);
-    ContractService.initialize(Manager.rpc_provider);
+    ContractService.initialize(Manager.rpc_provider, BLOCK_RANGE);
+    CronjobService.initialize(Manager.rpc_provider, API_KEY, CHUNK_SIZE);
 
     return true;
 }
@@ -49,27 +50,13 @@ const onMsgBTBase = async (msg) => {
     let stats = {};
 
     try {
-        logDebug(`onMsgBTBase [->] request received from: @${msg.from.username}(${msg.from.id})`);
+        `onMsgBTBase [->] request received from: @${msg.from.username}(${msg.from.id})`.logDebug();
 
-        let lotteryID;
-        let events = await ContractService.getContractEvents();
-        events = events.reverse();    
+        let lotteryID = await ContractService.getCurrentLotteryID();
+        let events = await MongodbService.getEvents();  
 
-        let transactions = await Promise.all(events.map(event => {
-            lotteryID ??= event.args[1].toString();
-            if(lotteryID == event.args[1].toString()){
-                return event.getTransaction();
-            }
-        }));
-        transactions = _.filter(transactions, t => t != undefined);
-
-        let tickets = [];
-        for(const transaction of transactions){
-            let decodedParams = await decodeParams(['uint256','uint32[]'], transaction.data, true);
-            for(const ticket of decodedParams[1].split(' ')[1].split(',')){
-                tickets.push(Array.from(ticket));
-            }
-        }
+        events = _.filter(events, e => e.lottoId && e.tickets && e.lottoId.toString() == lotteryID.toString());
+        let tickets = events.map(e => e.tickets).flat(1);
 
         positions.forEach(pos => stats[pos] = {});
         for(const ticket of tickets){
@@ -78,9 +65,10 @@ const onMsgBTBase = async (msg) => {
                 stats[pos][ticket[pos-1]]++;
             }
         }
-        logDebug(`onMsgBTBase [<-]`);
+
+        `onMsgBTBase [<-]`.logDebug();
     } catch(ex) {
-        logErrorDebug(`onMsgBTBase [x] error: ${ex.toString()}`);
+        `onMsgBTBase [x] error: ${ex.toString()}`.logError();
     }
 
     return stats;
@@ -88,12 +76,13 @@ const onMsgBTBase = async (msg) => {
 
 const onMsgBT = async (msg) => {
     try {
-        logDebug(`onMsgBT [->] request received from: @${msg.from.username}(${msg.from.id})`);
+        `onMsgBT [->] request received from: @${msg.from.username}(${msg.from.id})`.logDebug();
         let stats = await onMsgBTBase(msg);
 
         let ticketNums = [];
         let statsChoiceReps = [];
         let message = 'Ticket best choice:'.break(2);    
+
         for(const pos of positions){
             let objsReps = numbers.map(n => { return { n: n, reps: stats[pos][n] }; });
             let minRepsObj = _.minBy(objsReps, obj => obj.reps);
@@ -108,15 +97,16 @@ const onMsgBT = async (msg) => {
                 });
             }
         }
+
         message += ticketNums.join('').break(2);
         message += `N times better than worst ticket: ${_.meanBy(statsChoiceReps, obj => obj.tBetterThanWorst).toFixed(2)}`.break(1);
         message += `N times better than average ticket: ${_.meanBy(statsChoiceReps, obj => obj.tBetterThanAverage).toFixed(2)}`.break(1);
 
         //How good it is compared to average choice?
         Manager.bot.sendMessage(msg.chat.id, message, { reply_to_message_id: msg.message_id });
-        logDebug(`onMsgBT [<-]`);
+        `onMsgBT [<-]`.logDebug();
     } catch(ex) {
-        logErrorDebug(`onMsgBT [x] error: ${ex.toString()}`);
+        `onMsgBT [x] error: ${ex.toString()}`.logError();
     }
 }
 
@@ -124,8 +114,9 @@ const onMsgBTStats = async (msg) => {
 
     // TODO
     // Add more stats and history check and backtesting, how much winners do we have tipically per pot? etc
+
     try {
-        logDebug(`onMsgBTStats [->] request received from: @${msg.from.username}(${msg.from.id})`);
+        `onMsgBTStats [->] request received from: @${msg.from.username}(${msg.from.id})`.logDebug();
         let stats = await onMsgBTBase(msg);
 
         let message = 'Tickets statistics:'.break(2);
@@ -141,9 +132,9 @@ const onMsgBTStats = async (msg) => {
         }
 
         Manager.bot.sendMessage(msg.chat.id, message, { reply_to_message_id: msg.message_id });
-        logDebug(`onMsgBTStats [<-]`);
+        `onMsgBTStats [<-]`.logDebug();
     } catch(ex) {
-        logErrorDebug(`onMsgBTStats [x] error: ${ex.toString()}`);
+        `onMsgBTStats [x] error: ${ex.toString()}`.logError();
     }
 }
 
@@ -153,71 +144,16 @@ const onMsgBTRn = async (msg, match) => {
     // TODO
     // Calculate optimal tickets choice
     try {
-        logDebug(`onMsgBTRn [->] request received from: @${msg.from.username}(${msg.from.id})`);
+        `onMsgBTRn [->] request received from: @${msg.from.username}(${msg.from.id})`.logDebug();
         Manager.bot.sendMessage(msg.chat.id, `Not implemented`, { reply_to_message_id: msg.message_id });
-        logDebug(`onMsgBTRn [<-]`);
+        `onMsgBTRn [<-]`.logDebug();
     } catch(ex) {
-        logErrorDebug(`onMsgBTRn [x] error: ${ex.toString()}`);
+        `onMsgBTRn [x] error: ${ex.toString()}`.logError();
     }
 }
 
 const onMsgHelp = async (msg) => {
     Manager.bot.sendMessage(msg.chat.id, getCommandHelpText(), { reply_to_message_id: msg.message_id });
-}
-
-const decodeParams = async (types, output, ignoreMethodHash) => {
-
-    if (!output || typeof output === 'boolean') {
-        ignoreMethodHash = output;
-        output = types;
-    }
-
-    if (ignoreMethodHash && output.replace(/^0x/, '').length % 64 === 8)
-        output = '0x' + output.replace(/^0x/, '').substring(8);
-
-    const abiCoder = new ethers.utils.AbiCoder();
-
-    if (output.replace(/^0x/, '').length % 64)
-        throw new Error('The encoded string is not valid. Its length must be a multiple of 64.');
-
-    return abiCoder.decode(types, output).reduce((obj, arg, index) => {
-        if (types[index] == 'address')
-            arg = "0x" + arg.substr(2).toLowerCase();
-        obj.push(types[index] + ': ' + arg);
-        return obj;
-    }, []);
-}
-
-function log(...data) {
-    for(var idx in data) {
-        if(typeof data[idx] === 'object' || Array.isArray(data[idx])) {
-            console.log(chalk.green(JSON.stringify(data[idx])));
-        } else {
-            console.log(chalk.green(data[idx]));
-        }
-    }
-}
-
-function logError(...data) {
-    for(var idx in data) {
-        if(typeof data[idx] === 'object' || Array.isArray(data[idx])) {
-            console.log(chalk.red(JSON.stringify(data[idx])));
-        } else {
-            console.log(chalk.red(data[idx]));
-        }
-    }
-}
-
-const logDebug = (...data) => { 
-    if(Config.DEBUG == 1) {
-        log(data);
-    }
-}
-
-const logErrorDebug = (...data) => {     
-    if(Config.DEBUG == 1) {
-        logError(data);
-    }
 }
 
 (async() => {

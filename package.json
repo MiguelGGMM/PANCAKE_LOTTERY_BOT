@@ -6,7 +6,7 @@
     "scripts": {
         "start": "node app.js",
         "watch": "NODE_ENV=development node app.js",
-        "deploy": "sudo git pull && sudo pm2 flush && sudo pm2 restart DevTracker && sudo pm2 log",
+        "deploy": "sudo git pull && sudo pm2 flush && sudo pm2 restart PancakeLotteryTicketsBot && sudo pm2 log",
         "dev": "nodemon app.js"
     },
     "dependencies": {
@@ -17,6 +17,8 @@
         "dotenv": "^16.0.0",
         "ethers": "^5.7.2",
         "lodash": "^4.17.21",
+        "mongodb": "^5.5.0",
+        "node-cron": "^3.0.2",
         "node-telegram-bot-api": "^0.57.0",
         "nodemon": "^2.0.20"
     }
