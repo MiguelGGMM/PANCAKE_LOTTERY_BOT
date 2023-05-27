@@ -23,6 +23,10 @@ class TelegramService {
         this.bot.setMyCommands(commands);
     }
 
+    async asyncSetMyCommands(commands) {
+        await this.bot.setMyCommands(commands);
+    }
+
     sendMessage = (chatId, message, opts) => {
         this.bot.sendMessage(chatId, message, {
             parse_mode: 'Markdown',

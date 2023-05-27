@@ -32,15 +32,15 @@ initialize_pancake_lottery_bot = async() => {
     // Set commands and receivers
     let telegramCommands = getTelegramCommands();
     for(let telegramCommand of telegramCommands){
-        if(telegramCommand.command == '/stats') telegramCommand._function = onMsgBTStats;
-        if(telegramCommand.command == '/gBT') telegramCommand._function = onMsgBT;
-        if(telegramCommand.command == '/gBTRn') telegramCommand._function = onMsgBTRn;
-        if(telegramCommand.command == '/help') telegramCommand._function = onMsgHelp;
+        if(telegramCommand.baseCommand.command == '/stats') telegramCommand._function = onMsgBTStats;
+        if(telegramCommand.baseCommand.command == '/gbt') telegramCommand._function = onMsgBT;
+        if(telegramCommand.baseCommand.command == '/gbtrn') telegramCommand._function = onMsgBTRn;
+        if(telegramCommand.baseCommand.command == '/help') telegramCommand._function = onMsgHelp;
     }
     
-    Manager.initialize(tokenBot, telegramCommands, RPC_PROVIDER);
+    Manager.initialize(tokenBot, telegramCommands, RPC_PROVIDER);    
     ContractService.initialize(Manager.rpc_provider, BLOCK_RANGE);
-    CronjobService.initialize(Manager.rpc_provider, API_KEY, CHUNK_SIZE);
+    CronjobService.initialize(Manager.rpc_provider, API_KEY, CHUNK_SIZE);    
 
     return true;
 }
@@ -57,6 +57,7 @@ const onMsgBTBase = async (msg) => {
 
         events = _.filter(events, e => e.lottoId && e.tickets && e.lottoId.toString() == lotteryID.toString());
         let tickets = events.map(e => e.tickets).flat(1);
+        `onMsgBTBase [-] got data from ${tickets.length} tickets`.logDebug();
 
         positions.forEach(pos => stats[pos] = {});
         for(const ticket of tickets){
@@ -73,6 +74,7 @@ const onMsgBTBase = async (msg) => {
 
     return stats;
 }
+
 
 const onMsgBT = async (msg) => {
     try {

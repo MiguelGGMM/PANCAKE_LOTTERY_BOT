@@ -1,0 +1,15 @@
+FROM node:18.12.1
+
+RUN npm i -g nodemon
+RUN mkdir -p /home/app
+RUN ["mkdir", "/install"]
+
+WORKDIR /install
+ADD ["./package.json", "/install"]
+RUN npm install --verbose
+ENV NODE_PATH=/install/node_modules
+
+WORKDIR /home/app
+EXPOSE 27017
+
+CMD [ "npm", "run", "dev" ] 

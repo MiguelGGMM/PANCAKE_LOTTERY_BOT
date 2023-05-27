@@ -7,12 +7,12 @@ class Manager {
 
     static initialize(botToken, telegramCommands, rpc_provider){
         if(!Manager.bot){
-            Manager.bot = TelegramService.initialize(botToken);
-            Manager.bot.setMyCommands(telegramCommands);            
+            Manager.bot = TelegramService.initialize(botToken); 
+            Manager.rpc_provider = new ethers.providers.JsonRpcProvider(rpc_provider);   
+            Manager.bot.setMyCommands(telegramCommands.map(command => command.baseCommand));            
             for(const tgCommand of telegramCommands){
                 Manager.bot.onText(tgCommand.commandRegex, tgCommand._function);
-            }   
-            Manager.rpc_provider = new ethers.providers.JsonRpcProvider(rpc_provider);     
+            }  
         }
     }
 

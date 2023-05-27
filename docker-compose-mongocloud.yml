@@ -1,0 +1,10 @@
+version: "3.9"
+services:
+  pancake-lottery-bot-cloud:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "27017:27017"
+    volumes:
+      - .:/home/app

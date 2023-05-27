@@ -2,7 +2,7 @@ const Manager = require('../chains/Manager');
 const { Database, Collections } = require('../database');
 const Config = require('../config'); 
 
-class MongodbService {
+class MongoDBService {
     static db;
     static collectionName;
 
@@ -72,4 +72,4 @@ class MongodbService {
     }
 }
 
-module.exports = MongodbService;
+module.exports = MongoDBService;
