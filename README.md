@@ -11,7 +11,5 @@
 
 ## COMMANDS
  /stats: Get current lottery numbers stats\
- /gBT: Get current best lottery ticket\
- /gBTRn: Get best ticket randomizing with a seed provided\
- (required parameters: seed and nº of tickets, example: /gBTRn 0 5)\
+ /gbt: Get current best lottery ticket\
  /help: How to use this bot\
