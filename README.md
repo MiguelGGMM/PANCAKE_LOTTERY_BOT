@@ -12,4 +12,4 @@
 ## COMMANDS
  /stats: Get current lottery numbers stats\
  /gbt: Get current best lottery ticket\
- /help: How to use this bot\
+ /help: How to use this bot
