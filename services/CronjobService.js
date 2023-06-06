@@ -30,6 +30,11 @@ class CronjobService {
         }
     }    
 
+    /**
+     * TODO: replace this by viewLottery call, 
+     * check firstTicketId and firstTicketIdNextLottery
+     * and perform a multicall in order to get the tickets numbers
+     */
     static async registerEvents() {
         let data = await ContractService.getContractEvents();
         `[CronjobService] Got ${data.length} events`.logDebug();
