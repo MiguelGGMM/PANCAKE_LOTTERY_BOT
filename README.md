@@ -13,3 +13,9 @@
  /stats: Get current lottery numbers stats\
  /gbt: Get current best lottery ticket\
  /help: How to use this bot
+
+ ### QUICK START
+
+ ```bash
+ npm run start
+ ```
